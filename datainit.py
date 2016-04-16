@@ -11,9 +11,10 @@ and length of time before the trip variable (also in days)
 import pandas as pd 
 import numpy as np 
 
-trainfile = 'data/train.csv'
-testfile = 'data/test.csv'
-destfile = 'data/destinations.csv'
+work_dir = '/media/ryan/Charlemagne/kaggle/2016/expedia/data'
+trainfile = work_dir + 'data/train.csv'
+testfile = work_dir + 'data/test.csv'
+destfile = work_dir + 'data/destinations.csv'
 
 df_destinations = pd.read_csv(destfile)
 
