@@ -10,53 +10,126 @@ and length of time before the trip variable (also in days)
 
 import pandas as pd 
 import numpy as np 
+from datetime import datetime
+from gc import collect
 
-work_dir = '/media/ryan/Charlemagne/kaggle/2016/expedia/data'
-trainfile = work_dir + 'data/train.csv'
-testfile = work_dir + 'data/test.csv'
-destfile = work_dir + 'data/destinations.csv'
+# work_dir = '/media/ryan/Charlemagne/kaggle/2016/expedia/data/'
+work_dir = '/media/maesh/Charming/Documents/Kaggle/2016/expedia/'
 
-df_destinations = pd.read_csv(destfile)
+trainfile = work_dir + 'train.csv'
+testfile = work_dir + 'test.csv'
+destfile = work_dir + 'destinations.csv'
 
-# column is 'date_time' that we want to convert
-# function is datetime.strptime(d,'%Y-%m-%d %H:%M:%S')
+# df_destinations = pd.read_csv(destfile)
 
-monthdict{1:'Jan',
-		  2:'Feb',
-		  3:'Mar',
-		  4:'Apr',
-		  5:'May',
-		  6:'Jun',
-		  7:'Jul',
-		  8:'Aug',
-		  9:'Sep',
-		  10:'Oct',
-		  11:'Nov',
-		  12:'Dec'}
+# Below code is not meant to be run concurrently, but instead
+# in piecemeal chunks as needed
 
-timeofday_dict{3:'00-03',
-			   6:'03-06',
-			   9:'06-09',
-			   12:'09-12',
-			   15:'12-15',
-			   18:'15-18',
-			   21:'18-21',
-			   24:'21-24'}
+# On my desktop, enough RAM so no need to chunk
+chunksize = 100000#37670293/19 # total rows evenly divisible by 19
+reader = pd.read_csv(trainfile,iterator=True,chunksize=chunksize)
+df_train = pd.concat(reader,ignore_index=True)
+
+# Set up data store
+# store = pd.HDFStore(work_dir + 'expedia.h5')
+
+# for chunk in reader :
+	# print(k)
+parse = lambda x: datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
+
+# break up that date_time column
+dates_times = df_train['date_time'].apply(parse)
+
+# Set-up df parsers
+year_parse = lambda x: x.year
+month_parse = lambda x: x.month
+# day_parse = lambda x: x.day 
+weekday_parse = lambda x: x.isoweekday()
+hour_parse = lambda x: x.hour 
+
+df_train['year'] = dates_times.apply(year_parse)
+df_train['month'] = dates_times.apply(month_parse)
+# chunk['day_of_month'] = dates_times.apply(day_parse)
+df_train['day_of_week'] = dates_times.apply(weekday_parse)
+df_train['hour'] = dates_times.apply(hour_parse)
+
+# Now break up srch_ci and srch_co
+# parse = lambda x: datetime.strptime(str(x), '%Y-%m-%d')
+def parse(x):
+	if type(x) is float :
+		return np.nan
+	else :
+		return datetime.strptime(str(x), '%Y-%m-%d')
+
+srch_ci_dts = df_train['srch_ci'].apply(parse)
+srch_co_dts = df_train['srch_co'].apply(parse)
+
+trip_length = srch_co_dts - srch_ci_dts
+
+del dates_times
+collect()
+# time_to_trip = srch_ci_dts - dates_times.astype(object)
+
+# Parser for the timedelta object
+def timedelta_parse(x):
+	if pd.isnull(x):
+		return np.nan
+	else :
+		return float(x.days)
+
+df_train['trip_length'] = trip_length.apply(timedelta_parse)
+df_train.to_csv(work_dir+'train_parsed',',')
 
 
-"""
-Pseudocode
+############################################################
+# Test Set 
 
-Loop through train and test 
-	import 100k rows
-	add new cols for months and time of days (20 new columns)
-	go through rows, one hot encoding the time stamps as above
-		if df_new['date_time'][row].time < 3:
-			df_new['00-03'][row index] = timeofday_dict[3]
-		elif month >= 3 & month < 6:
-			df_new['03-06'][row index] = timeofday_dict[6]
-			.
-			.
-			.
-	append new csv file with added columns
-"""
+df_test = pd.read_csv(testfile)
+
+parse = lambda x: datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
+
+# break up that date_time column
+dates_times = df_test['date_time'].apply(parse)
+
+# Set-up df parsers
+year_parse = lambda x: x.year
+month_parse = lambda x: x.month
+weekday_parse = lambda x: x.isoweekday()
+hour_parse = lambda x: x.hour 
+
+df_test['year'] = dates_times.apply(year_parse)
+df_test['month'] = dates_times.apply(month_parse)
+df_test['day_of_week'] = dates_times.apply(weekday_parse)
+df_test['hour'] = dates_times.apply(hour_parse)
+
+# Now break up srch_ci and srch_co
+# parse = lambda x: datetime.strptime(str(x), '%Y-%m-%d')
+def parse(x):
+	if type(x) is float :
+		return np.nan
+	else :
+		try :
+			return datetime.strptime(str(x), '%Y-%m-%d')
+		except ValueError :
+			return np.nan
+
+srch_ci_dts = df_test['srch_ci'].apply(parse)
+srch_co_dts = df_test['srch_co'].apply(parse)
+
+trip_length = srch_co_dts - srch_ci_dts
+
+# Parser for the timedelta object
+def timedelta_parse(x):
+	if pd.isnull(x):
+		return np.nan
+	else :
+		return float(x.days)
+
+df_test['trip_length'] = trip_length.apply(timedelta_parse)
+df_test.to_csv(work_dir+'test_parsed.csv',',')
+
+################################################################
+# Now just pull out only those training segments where a booking
+# occurred
+
+df_train = df_train[df_train['is_booking'] == 1]
