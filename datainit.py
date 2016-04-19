@@ -78,7 +78,7 @@ def timedelta_parse(x):
 		return float(x.days)
 
 df_train['trip_length'] = trip_length.apply(timedelta_parse)
-df_train.to_csv(work_dir+'train_parsed',',')
+df_train.to_csv(work_dir+'train_parsed.csv',',')
 
 
 ############################################################
@@ -126,10 +126,60 @@ def timedelta_parse(x):
 		return float(x.days)
 
 df_test['trip_length'] = trip_length.apply(timedelta_parse)
-df_test.to_csv(work_dir+'test_parsed.csv',',')
+
+# Drop columns if desired
+df_test['is_booking'] = np.ones(len(df_test)) # add this in
+df_test.drop(['srch_ci','srch_co','date_time'], axis = 1, inplace=True)
+df_test.to_csv(work_dir+'test_parsed_booking_drop.csv',',')
 
 ################################################################
 # Now just pull out only those training segments where a booking
 # occurred
 
 df_train = df_train[df_train['is_booking'] == 1]
+
+parse = lambda x: datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
+
+# break up that date_time column
+dates_times = df_train['date_time'].apply(parse)
+
+# Set-up df parsers
+year_parse = lambda x: x.year
+month_parse = lambda x: x.month
+# day_parse = lambda x: x.day 
+weekday_parse = lambda x: x.isoweekday()
+hour_parse = lambda x: x.hour 
+
+df_train['year'] = dates_times.apply(year_parse)
+df_train['month'] = dates_times.apply(month_parse)
+# chunk['day_of_month'] = dates_times.apply(day_parse)
+df_train['day_of_week'] = dates_times.apply(weekday_parse)
+df_train['hour'] = dates_times.apply(hour_parse)
+
+# Now break up srch_ci and srch_co
+# parse = lambda x: datetime.strptime(str(x), '%Y-%m-%d')
+def parse(x):
+	if type(x) is float :
+		return np.nan
+	else :
+		return datetime.strptime(str(x), '%Y-%m-%d')
+
+srch_ci_dts = df_train['srch_ci'].apply(parse)
+srch_co_dts = df_train['srch_co'].apply(parse)
+
+trip_length = srch_co_dts - srch_ci_dts
+
+# Parser for the timedelta object
+def timedelta_parse(x):
+	if pd.isnull(x):
+		return np.nan
+	else :
+		return float(x.days)
+
+df_train['trip_length'] = trip_length.apply(timedelta_parse)
+
+# now remove columns that are not going to help classifier
+df_train.drop(['srch_ci','srch_co','date_time'], axis = 1, inplace=True)
+
+# Save to CSV
+df_train.to_csv(work_dir+'train_parsed_booking_drop.csv',',')
