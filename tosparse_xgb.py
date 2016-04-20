@@ -5,7 +5,7 @@ Using XGBoost to train and test a classifier
 import numpy as np 
 import pandas as pd 
 import xgboost as xgb
-from scipy.sparse import hstack
+from scipy.sparse import hstack, csr_matrix
 from sklearn import preprocessing, cross_validation, metrics
 
 rs = 19683
@@ -28,8 +28,8 @@ X = df_train.values
 test_IDs = df_test['id'].values
 df_test = df_test[df_train.columns]
 
-df_train = df_train.to_sparse(fill_value=0)
-df_test = df_test.to_sparse(fill_value=0)
+# df_train = df_train
+# df_test = df_test
 # [u'Unnamed: 0', u'site_name', u'posa_continent',
 #        u'user_location_country', u'user_location_region',
 #        u'user_location_city', u'orig_destination_distance', u'user_id',
@@ -39,7 +39,7 @@ df_test = df_test.to_sparse(fill_value=0)
 #        u'hotel_country', u'hotel_market', u'hotel_cluster', u'year', u'month',
 #        u'day_of_week', u'hour', u'trip_length']
 
-lb = preprocessing.LabelBinarizer(sparse_output=True)
+
 
 binarizer_list = ['site_name','posa_continent','user_location_country',\
 				'user_location_region','user_location_city','channel',\
@@ -47,62 +47,15 @@ binarizer_list = ['site_name','posa_continent','user_location_country',\
 				'hotel_market','year','month','day_of_week','hour']
 
 # Encode dummies as categorical ([df, pd.get_dummies(df['YEAR'])], axis=1)
-df_train_sparse = df_train.to_sparse(fill_value=0)
-df_test_sparse = df_test.to_sparse(fill_value=0)
+df_train_sparse = csr_matrix(df_train.values)
+df_test_sparse = csr_matrix(df_test.values)
 
 for item in binarizer_list :
-	df_train_sparse = hstack((df_train_sparse,lb.fit_transform(df_train[item])))
-	
-	df_train = pd.concat([df_train, pd.DataFrame(lb.fit_transform(df_train[item]))],axis = 1)
-	df_test = pd.concat([df_test, pd.DataFrame(lb.transform(df_test[item]))],axis = 1)
+	lb = preprocessing.LabelBinarizer(sparse_output=True)
+	df_train_sparse = hstack((df_train_sparse,lb.fit_transform(df_train[item])),format='csr')
+	df_test_sparse = hstack((df_test_sparse,lb.transform(df_test[item])),format='csr')
 
-
-
-df_train = pd.concat([df_train, pd.get_dummies(df_train['site_name'], \
-	prefix='site_name', sparse = True)], axis=1)
-df_train = pd.concat([df_train, pd.get_dummies(df_train['posa_continent'], \
-	prefix='posa_continent', sparse = True)], axis=1)
-df_train = pd.concat([df_train, pd.get_dummies(df_train['user_location_country'], \
-	prefix='user_location_country', sparse = True)], axis=1)
-df_train = pd.concat([df_train, pd.get_dummies(df_train['user_location_region'], \
-	prefix='user_location_region', sparse = True)], axis=1)
-df_train = pd.concat([df_train, pd.get_dummies(df_train['user_location_city'], \
-	prefix='user_location_city', sparse = True)], axis=1)
-df_train = pd.concat([df_train, pd.get_dummies(df_train['channel'], \
-	prefix='channel', sparse = True)], axis=1)
-df_train = pd.concat([df_train, pd.get_dummies(df_train['srch_destination_type_id'], \
-	prefix='srch_destination_type_id', sparse = True)], axis=1)
-df_train = pd.concat([df_train, pd.get_dummies(df_train['hotel_continent'], \
-	prefix='hotel_continent', sparse = True)], axis=1)
-df_train = pd.concat([df_train, pd.get_dummies(df_train['hotel_country'], \
-	prefix='hotel_country', sparse = True)], axis=1)
-df_train = pd.concat([df_train, pd.get_dummies(df_train['hotel_market'], \
-	prefix='hotel_market', sparse = True)], axis=1)
-df_train = pd.concat([df_train, pd.get_dummies(df_train['year'], \
-	prefix='year', sparse = True)], axis=1)
-df_train = pd.concat([df_train, pd.get_dummies(df_train['month'], \
-	prefix='month', sparse = True)], axis=1)
-df_train = pd.concat([df_train, pd.get_dummies(df_train['day_of_week'], \
-	prefix='day_of_week', sparse = True)], axis=1)
-df_train = pd.concat([df_train, pd.get_dummies(df_train['hour'], \
-	prefix='hour', sparse = True)], axis=1)
-
-df_test = pd.concat([df_test, pd.get_dummies(df_test['site_name'])], axis=1, prefix='site_name')
-df_test = pd.concat([df_test, pd.get_dummies(df_test['posa_continent'])], axis=1, prefix='posa_continent')
-df_test = pd.concat([df_test, pd.get_dummies(df_test['user_location_country'])], axis=1, prefix='user_location_country')
-df_test = pd.concat([df_test, pd.get_dummies(df_test['user_location_region'])], axis=1, prefix='user_location_region')
-df_test = pd.concat([df_test, pd.get_dummies(df_test['user_location_city'])], axis=1, prefix='user_location_city')
-df_test = pd.concat([df_test, pd.get_dummies(df_test['channel'])], axis=1, prefix='channel')
-df_test = pd.concat([df_test, pd.get_dummies(df_test['srch_destination_type_id'])], axis=1, prefix='srch_destination_type_id')
-df_test = pd.concat([df_test, pd.get_dummies(df_test['hotel_continent'])], axis=1, prefix='hotel_continent')
-df_test = pd.concat([df_test, pd.get_dummies(df_test['hotel_country'])], axis=1, prefix='hotel_country')
-df_test = pd.concat([df_test, pd.get_dummies(df_test['hotel_market'])], axis=1, prefix='hotel_market')
-df_test = pd.concat([df_test, pd.get_dummies(df_test['year'])], axis=1, prefix='year')
-df_test = pd.concat([df_test, pd.get_dummies(df_test['month'])], axis=1, prefix='month')
-df_test = pd.concat([df_test, pd.get_dummies(df_test['day_of_week'])], axis=1, prefix='day_of_week')
-df_test = pd.concat([df_test, pd.get_dummies(df_test['hour'])], axis=1, prefix='hour')
-
-
+X = df_train_sparse
 X_train, X_val, y_train, y_val = cross_validation.train_test_split(X, y, test_size=0.3)
 
 xg_train = xgb.DMatrix(X_train,label=y_train,missing=np.nan)
@@ -136,4 +89,4 @@ submissions = (-test_prob).argsort()[:,:5]
 submit = pd.read_csv(work_dir+'sample_submission.csv')
 intermediate = np.apply_along_axis(makespace, 1, submissions)
 submit['hotel_cluster'] = intermediate
-submit.to_csv(work_dir+'xgb1.sub1.40rounds.2016.04.19.csv',header=True,index=False)
+submit.to_csv(work_dir+'xgb1.sub2.sparse.40rounds.2016.04.19.csv',header=True,index=False)
