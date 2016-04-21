@@ -28,18 +28,6 @@ X = df_train.values
 test_IDs = df_test['id'].values
 df_test = df_test[df_train.columns]
 
-# df_train = df_train
-# df_test = df_test
-# [u'Unnamed: 0', u'site_name', u'posa_continent',
-#        u'user_location_country', u'user_location_region',
-#        u'user_location_city', u'orig_destination_distance', u'user_id',
-#        u'is_mobile', u'is_package', u'channel', u'srch_adults_cnt',
-#        u'srch_children_cnt', u'srch_rm_cnt', u'srch_destination_id',
-#        u'srch_destination_type_id', u'is_booking', u'cnt', u'hotel_continent',
-#        u'hotel_country', u'hotel_market', u'hotel_cluster', u'year', u'month',
-#        u'day_of_week', u'hour', u'trip_length']
-
-
 
 binarizer_list = ['site_name','posa_continent','user_location_country',\
 				'user_location_region','user_location_city','channel',\
