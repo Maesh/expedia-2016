@@ -78,8 +78,7 @@ num_round = 40
 
 bst = xgb.train(param, xg_train, num_round, watchlist)
 
-
-xg_test = xgb.DMatrix(df_test.values,missing=np.nan)
+xg_test = xgb.DMatrix(df_test_sparse,missing=np.nan)
 test_prob = bst.predict(xg_test)
 print(test_prob.shape)
 def makespace(x):    
